@@ -1,0 +1,134 @@
+@startuml armsim_class_diagram.svg
+
+class Simulation {
+	+Simulation(processor : Processor*)
+	+getLog() : Log*
+	+addDevice(device : Device*)
+	+getProcessor() : Processor*
+}
+
+class Processor {
+	+initialize(log : Log*, memory : Memory*)
+	+{abstract}setRegister(name : std::string, value : uint64_t)
+	+{abstract}getRegister(name : std::string) : uint64_t
+	+{abstract}getRegisterSize(name : std::string) : unsigned int
+	+{abstract}getRegisterList() : std::vector<std::string>
+	+{abstract}run(steps : unsigned int)
+	+getLog() : Log*
+	+getMemory() : Memory*
+}
+
+class ArmProcessor {
+	+fetchInstruction() : uint32_t
+	+fetchInstructionThumb() : uint32_t
+	+executeInstruction(instruction : uint32_t)
+}
+
+class ArmDecoder {
+}
+
+class ArmRegisterFile {
+	+registers : uint32_t[16]
+	+statusRegisters : uint32_t[16]
+}
+
+class Memory {
+	+readWord(address : uintptr_t) : uint32_t
+	+writeWord(address : uintptr_t, value : uint32_t)
+	+readHalfWord(address : uintptr_t) : uint16_t
+	+writeHalfWord(address : uintptr_t, value : uint16_t)
+	+readByte(address : uintptr_t) : uint8_t
+	+writeByte(address : uintptr_t, value : uint8_t)
+	+registerArea(area : MemoryArea*)
+}
+
+interface MemoryArea {
+	+getStart() : uintptr_t
+	+getEnd() : uintptr_t
+	+readWord(address : uintptr_t) : uint32_t
+	+writeWord(address : uintptr_t, value : uint32_t)
+	+readHalfWord(address : uintptr_t) : uint16_t
+	+writeHalfWord(address : uintptr_t, value : uint16_t)
+	+readByte(address : uintptr_t) : uint8_t
+	+writeByte(address : uintptr_t, value : uint8_t)
+}
+
+class RamArea {
+}
+
+interface Device {
+	+{abstract}initialize(log : Log*, memory : Memory*)
+}
+
+class Log {
+	+debug(source : std::string, text : std::string)
+	+info(source : std::string, text : std::string)
+	+warning(source : std::string, text : std::string)
+	+error(source : std::string, text : std::string)
+	+getContent(std::vector<LogLine> *content)
+	+clearContent()
+	+incrementTime()
+	+save(fileName : std::string)
+	-log(level : LogLevel, source : std::string, text : std::string)
+}
+
+class LogLine {
+	+time : uint64_t
+	+level : LogLevel
+	+source : std::string
+	+text : std::string
+}
+
+enum LogLevel {
+	+Debug
+	+Information
+	+Warning
+	+Error
+}
+
+Simulation --> Processor
+Simulation --> Log
+Simulation --> "1" Memory
+Simulation --> "*" Device
+
+Memory --> "*" MemoryArea
+
+Processor <|-- ArmProcessor
+Processor .right.> Memory
+ArmProcessor --> ArmRegisterFile
+ArmProcessor --> ArmDecoder
+
+Log --> "*" LogLine
+LogLine --> LogLevel
+
+MemoryArea <|-- RamArea
+
+enum MemoryAccessMode {
+	+Read
+	+Write
+}
+
+class MemoryAccessException {
+	+MemoryAccessException(address : uintptr_t, size : unsigned int, mode : MemoryAccessMode)
+	+getAddress() : uintptr_t
+	+getSize() : unsigned int
+	+getMode() : MemoryAccessMode
+}
+
+class NonexistentMemoryException {
+}
+
+MemoryAccessException <|-- NonexistentMemoryException
+MemoryAccessException ..> MemoryAccessMode
+
+note as N1
+	Features:
+	 * Exchangeable devices
+	 * Device memory accesses can be freely implemented
+	 * Exchangeable processor
+	 * Branch targets can be logged
+	 * Memory content can be set at startup or later
+	 * Initial CPU state can be set by the user
+end note
+
+@enduml
