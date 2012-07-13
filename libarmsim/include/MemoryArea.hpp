@@ -22,6 +22,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef ARMSIM_MEMORYAREA_HPP_INCLUDED
 #define ARMSIM_MEMORYAREA_HPP_INCLUDED
 
+#include <cstdint>
+
 class MemoryArea {
 public:
 	MemoryArea(uintptr_t start, uintptr_t end) : start(start), end(end) {

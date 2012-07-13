@@ -11,11 +11,12 @@ set(SRC
 	include/MemoryAccessMode.hpp
 	include/Memory.hpp
 	include/Processor.hpp
+	include/RamArea.hpp
 	include/Simulation.hpp
 	src/Log.cpp
 	src/MemoryAccessException.cpp
 	src/Memory.cpp
-	src/Processor.cpp
+	src/RamArea.cpp
 	src/Simulation.cpp
 )
 

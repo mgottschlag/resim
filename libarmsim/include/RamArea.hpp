@@ -19,4 +19,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "Processor.hpp"
+#ifndef ARMSIM_RAMAREA_HPP_INCLUDED
+#define ARMSIM_RAMAREA_HPP_INCLUDED
+
+#include "MemoryArea.hpp"
+
+class RamArea : public MemoryArea {
+public:
+	RamArea(uintptr_t start, uintptr_t end);
+	virtual ~RamArea();
+
+	virtual uint32_t readWord(uintptr_t address);
+	virtual void writeWord(uintptr_t address, uint32_t value);
+	virtual uint16_t readHalfWord(uintptr_t address);
+	virtual void writeHalfWord(uintptr_t address, uint16_t value);
+	virtual uint8_t readByte(uintptr_t address);
+	virtual void writeByte(uintptr_t address, uint8_t value);
+private:
+	uint8_t *data;
+};
+
+#endif
