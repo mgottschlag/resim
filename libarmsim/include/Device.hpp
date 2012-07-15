@@ -31,6 +31,8 @@ public:
 	}
 
 	virtual void initialize(Log *log, Memory *memory) = 0;
+
+	virtual Device *clone() = 0;
 };
 
 #endif

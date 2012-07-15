@@ -14,6 +14,7 @@ class Processor {
 	+{abstract}getRegisterSize(name : std::string) : unsigned int
 	+{abstract}getRegisterList() : std::vector<std::string>
 	+{abstract}run(steps : unsigned int)
+	+{abstract}clone() : Processor*
 	+getLog() : Log*
 	+getMemory() : Memory*
 }
@@ -58,6 +59,7 @@ class RamArea {
 
 interface Device {
 	+{abstract}initialize(log : Log*, memory : Memory*)
+	+{abstract}clone() : Device*
 }
 
 class Log {

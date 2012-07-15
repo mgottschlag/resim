@@ -47,6 +47,8 @@ public:
 	virtual const std::vector<std::string> &getRegisterList() = 0;
 	virtual void run(unsigned int steps) = 0;
 
+	virtual Processor *clone() = 0;
+
 	Log *getLog() {
 		return log;
 	}
