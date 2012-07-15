@@ -1,0 +1,21 @@
+@startuml gui_class_diagram.svg
+
+class MainWindow {
+}
+
+class SimulationThread {
+	+setProcessor(processor : Processor*)
+	+getProcessor() : Processor*
+	+start()
+	+stop()
+	+pause()
+	+runningChanged()
+	+paused()
+	+simulation : Simulation*
+	+processor : Processor*
+	+devices : std::vector<Device*>
+}
+
+MainWindow --> SimulationThread
+
+@enduml
