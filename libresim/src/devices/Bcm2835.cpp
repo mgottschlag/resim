@@ -13,6 +13,10 @@
 #define MEMORY_SIZE (128 * 1024 * 1024)
 #define MMIO_START 0x7e000000
 #define MMIO_LENGTH 0x01000000
+#define BOOTROM_START 0x60000000
+#define BOOTROM_LENGTH 0x00010000
+#define SRAM_START 0x60008000
+#define SRAM_LENGTH 0x00008000
 
 #include <iostream>
 
@@ -205,12 +209,17 @@ static MmioDefinition registers = {
 	sizeof(groups) / sizeof(groups[0]), groups
 };
 
-Bcm2835::Bcm2835() : data(NULL), mmio(NULL), uartRelay(NULL) {
+static MmioDefinition bootromRegs = {
+	0, NULL
+};
+
+Bcm2835::Bcm2835() : data(NULL), mmio(NULL), sram(NULL), sramData(NULL), uartRelay(NULL) {
 	for (unsigned int i = 0; i < 4; i++) {
 		memory[i] = NULL;
 	}
 }
-Bcm2835::Bcm2835(const Bcm2835 &other) : data(NULL), mmio(NULL), uartRelay(NULL) {
+Bcm2835::Bcm2835(const Bcm2835 &other) : data(NULL), mmio(NULL), sram(NULL),
+		sramData(NULL), uartRelay(NULL) {
 	for (unsigned int i = 0; i < 4; i++) {
 		memory[i] = NULL;
 	}
@@ -226,6 +235,12 @@ Bcm2835::~Bcm2835() {
 	}
 	if (mmio) {
 		delete[] mmio;
+	}
+	if (sram) {
+		delete[] sram;
+	}
+	if (sramData) {
+		delete[] sramData;
 	}
 	if (uartRelay) {
 		delete uartRelay;
@@ -251,13 +266,28 @@ void Bcm2835::initialize(Log *log, Memory *memory) {
 	memory->registerArea(mmio);
 	log->info("bcm2835", "Added MMIO (0x%08x to 0x%08x).", MMIO_START,
 			MMIO_START + MMIO_LENGTH);
-	log->info("bcm2835", "Expected GPFSEL1: %08x (%08x)",
-			 (2 << 12) | (2 << 15) | (1 << 18),
-			 (7 << 12) | (7 << 15) | (7 << 18));
 
 	mmio->setCallbacks(&UartRelay::executeWriteStatic,
 	                   &UartRelay::executeReadStatic,
 	                   uartRelay);
+
+	/*bootrom = new MmioArea(bootromRegs, BOOTROM_START,
+			BOOTROM_START + BOOTROM_LENGTH, log);
+	memory->registerArea(bootrom);
+	log->info("bcm2835", "Added MMIO (0x%08x to 0x%08x).", BOOTROM_START,
+			BOOTROM_START + BOOTROM_LENGTH);
+
+	bootrom->setCallbacks(&UartRelay::executeWriteStatic,
+	                   &UartRelay::executeReadStatic,
+	                   uartRelay);*/
+	if (sramData == NULL) {
+		sramData = new uint8_t[SRAM_LENGTH];
+	}
+	sram = new RamArea(sramData, SRAM_START, SRAM_START + SRAM_LENGTH);
+	memory->registerArea(sram);
+	log->info("bcm2835", "Added DRAM (0x%08x to 0x%08x).", SRAM_START,
+			SRAM_START + SRAM_LENGTH);
+
 }
 
 Device *Bcm2835::clone() const {

@@ -28,6 +28,9 @@ private:
 	uint8_t *data;
 
 	MmioArea *mmio;
+	MmioArea *bootrom;
+	RamArea *sram;
+	uint8_t *sramData;
 
 	UartRelay *uartRelay;
 };

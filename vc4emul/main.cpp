@@ -110,6 +110,10 @@ int main(int argc, char **argv) {
 	} catch (const std::exception &e) {
 		log.save("vc4emul.log");
 		std::cerr << "Exception: " << e.what() << std::endl;
+		const std::vector<std::string> &registers = processor->getRegisterList();
+		for (auto it = registers.begin(); it != registers.end(); it++) {
+			std::cerr << *it << ": " << std::hex << processor->getRegister(*it) << std::endl;
+		}
 	}
 	return 0;
 }
