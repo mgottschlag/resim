@@ -89,3 +89,12 @@ MemoryArea *Memory::getArea(uintptr_t address,
 	}
 	throw NonexistentMemoryException(address, size, mode);
 }
+
+void Memory::setCurrentInstr(uintptr_t pc) {
+	Memory::pc = pc;
+}
+uintptr_t Memory::getCurrentInstr() {
+	return pc;
+}
+
+uintptr_t Memory::pc = 0;

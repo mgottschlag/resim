@@ -39,12 +39,17 @@ public:
 	void writeByte(uintptr_t address, uint8_t value);
 
 	void registerArea(MemoryArea *area);
+
+	static void setCurrentInstr(uintptr_t pc);
+	static uintptr_t getCurrentInstr();
 private:
 	MemoryArea *getArea(uintptr_t address,
 	                    unsigned int size,
 	                    MemoryAccessMode::List mode);
 
 	std::vector<MemoryArea*> areas;
+
+	static uintptr_t pc;
 };
 
 #endif

@@ -1,6 +1,7 @@
 
 #include "devices/MmioArea.hpp"
 #include "Log.hpp"
+#include "Memory.hpp"
 
 #include <stdexcept>
 #include <sstream>
@@ -18,13 +19,17 @@ uint32_t MmioArea::readWord(uintptr_t address) {
 	if (readImpl) {
 		value = readImpl(cbContext, address, 4);
 	}
-	log->info("mmio", "MMIO read (4): %s => 0x%08x", decode(address, 4).c_str(),
-			value);
+	log->info("mmio", "MMIO(R, 4, 0x%08x): 0x%08x => 0x%08x",
+	          (uint32_t)Memory::getCurrentInstr(),
+	          (uint32_t)address,
+	          value);
 	return value;
 }
 void MmioArea::writeWord(uintptr_t address, uint32_t value) {
-	log->info("mmio", "MMIO write (4): %s <= 0x%08x", decode(address, 4).c_str(),
-			value);
+	log->info("mmio", "MMIO(W, 4, 0x%08x): 0x%08x <= 0x%08x",
+	          (uint32_t)Memory::getCurrentInstr(),
+	          (uint32_t)address,
+	          value);
 	if (writeImpl) {
 		writeImpl(cbContext, address, value, 4);
 	}

@@ -71,8 +71,8 @@ void Log::save(const std::string &fileName) {
 	}
 	contentMutex.lock();
 	for (LogLine line : content) {
-		file << line.time << "\t" << line.level << "\t" << line.source << "\t"
-				<< line.text << std::endl;
+		file << line.time << "\t" << /*line.level << "\t" << line.source << "\t"
+				<< */line.text << std::endl;
 	}
 	contentMutex.unlock();
 }

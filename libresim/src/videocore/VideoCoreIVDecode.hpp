@@ -25,6 +25,7 @@ public:
 
 	void step() {
 		log->debug("vc4", "pc: %08x", pc());
+		Memory::setCurrentInstr(pc());
 		uint16_t inst1 = memory->readHalfWord(pc());
 		if ((inst1 & 0x8000) == 0) {
 			scalar16(inst1);
@@ -50,6 +51,7 @@ public:
 			log->error("vc4", "Unsupported instruction: 0x%04x", inst1);
 			throw std::runtime_error("Unsupported instruction.");
 		}
+		log->incrementTime();
 	}
 
 	void scalar16(uint16_t inst) {
