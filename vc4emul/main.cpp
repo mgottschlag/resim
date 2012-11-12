@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 	}*/
 	// Initialize the simulator
 	Memory memory;
-	Log log;
+	Log log("vc4emul.log");
 	log.info("", "Initializing the simulator...");
 	processor->initialize(&log, &memory);
 	foreach (auto device, devices) {
@@ -105,10 +105,8 @@ int main(int argc, char **argv) {
 	try {
 		while (true) {
 			processor->run(1000);
-			log.save("vc4emul.log");
 		}
 	} catch (const std::exception &e) {
-		log.save("vc4emul.log");
 		std::cerr << "Exception: " << e.what() << std::endl;
 		const std::vector<std::string> &registers = processor->getRegisterList();
 		for (auto it = registers.begin(); it != registers.end(); it++) {

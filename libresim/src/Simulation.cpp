@@ -24,7 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Processor.hpp"
 #include "Device.hpp"
 
-Simulation::Simulation(Processor *processor) : processor(processor) {
+Simulation::Simulation(Processor *processor)
+		: processor(processor), log("resim.log") {
 	memory = new Memory();
 	processor->initialize(&log, memory);
 }

@@ -21,8 +21,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Log.hpp"
 
-#include <fstream>
 #include <iostream>
+
+Log::Log(const std::string &filename) : file(filename), time(0) {
+	if (!file) {
+		throw std::runtime_error("Cannot open log file for writing.");
+	}
+}
 
 void Log::debug(const std::string &source, const char *fmt, ...) {
 	va_list args;
@@ -49,32 +54,8 @@ void Log::error(const std::string &source, const char *fmt, ...) {
 	va_end( args );
 }
 
-void Log::getContent(std::vector<LogLine> *content) {
-	contentMutex.lock();
-	*content = this->content;
-	contentMutex.unlock();
-}
-void Log::clearContent() {
-	contentMutex.lock();
-	content.clear();
-	contentMutex.unlock();
-}
 void Log::incrementTime() {
 	time++;
-}
-
-void Log::save(const std::string &fileName) {
-	std::ofstream file(fileName);
-	if (!file) {
-		// TODO: Proper exception class
-		throw std::runtime_error("Log file could not be opened.");
-	}
-	contentMutex.lock();
-	for (LogLine line : content) {
-		file << line.time << "\t" << /*line.level << "\t" << line.source << "\t"
-				<< */line.text << std::endl;
-	}
-	contentMutex.unlock();
 }
 
 void Log::log(LogLevel::List level,
@@ -88,8 +69,7 @@ void Log::log(LogLevel::List level,
 	line.level = level;
 	line.source = source;
 	line.text = text;
-	contentMutex.lock();
-	content.push_back(line);
-	std::cout << text << std::endl;
-	contentMutex.unlock();
+	fileMutex.lock();
+	file << line.time << "\t" << line.text << std::endl;
+	fileMutex.unlock();
 }

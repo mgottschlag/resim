@@ -27,6 +27,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <mutex>
 #include <vector>
 #include <cstdarg>
+#include <fstream>
 
 struct LogLevel {
 	enum List {
@@ -49,8 +50,7 @@ struct LogLine {
  */
 class Log {
 public:
-	Log() : time(0) {
-	}
+	Log(const std::string &filename);
 
 	void debug(const std::string &source, const char *fmt, ...)
 			__attribute__ ((format (printf, 3, 4)));
@@ -61,19 +61,15 @@ public:
 	void error(const std::string &source, const char *fmt, ...)
 			__attribute__ ((format (printf, 3, 4)));
 
-	void getContent(std::vector<LogLine> *content);
-	void clearContent();
 	void incrementTime();
-
-	void save(const std::string &fileName);
 private:
 	void log(LogLevel::List level,
 	         const std::string &source,
 	         const char *fmt,
 	         va_list args);
 
-	std::mutex contentMutex;
-	std::vector<LogLine> content;
+	std::mutex fileMutex;
+	std::ofstream file;
 
 	uint64_t time;
 };
