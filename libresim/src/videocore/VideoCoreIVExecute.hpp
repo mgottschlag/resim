@@ -8,6 +8,7 @@
 
 #include <stdexcept>
 #include <cassert>
+#include <math.h>
 
 static const uint32_t VIDEOCORE4_CPUID = 0x04000104;
 
@@ -51,6 +52,51 @@ enum LoadStoreWidth {
 	WIDTH_U16,
 	WIDTH_U8,
 	WIDTH_S16
+};
+
+enum FloatConvOp {
+	OP_FTRUNC,
+	OP_FLOOR,
+	OP_FLTS,
+	OP_FLTU
+};
+
+enum FloatOp {
+	OP_FADD,
+	OP_FSUB,
+	OP_FMUL,
+	OP_FDIV,
+	OP_FCMP,
+	OP_FABS,
+	OP_FRSB,
+	OP_FMAX,
+	OP_RRCP,
+	OP_FRSQRT,
+	OP_FNMUL,
+	OP_FMIN,
+	OP_FLD1,
+	OP_FLD0,
+	OP_FOP14,
+	OP_FOP15
+};
+
+enum Condition {
+	COND_EQ,
+	//COND_NE,
+	COND_CS,
+	//COND_CC,
+	COND_NS,
+	//COND_NC,
+	COND_VS,
+	//COND_VC,
+	COND_HI,
+	//COND_LS,
+	COND_GE,
+	//COND_LT,
+	COND_GT,
+	//COND_LE,
+	COND_TRUE,
+	//COND_FALSE
 };
 
 static unsigned int loadStoreSize(LoadStoreWidth format) {
@@ -103,9 +149,14 @@ public:
 		registers.setRegister(reg, VIDEOCORE4_CPUID);
 	}
 
-	void add(unsigned int rd, unsigned int rs, unsigned int shift) {
-		// TODO
-		throw std::runtime_error("Unsupported instruction.");
+	void addShl(unsigned int cond, unsigned int rd, unsigned int ra, unsigned int rb, unsigned int shift) {
+		log->debug("vc4exec", "addShl");
+		if (!checkCond(cond)) {
+			return;
+		}
+		uint32_t a = registers.getRegister(ra);
+		uint32_t b = registers.getRegister(rb) << shift;
+		registers.setRegister(rd, a + b);
 	}
 
 	void binaryOp(unsigned int op, unsigned int rd, unsigned int rs) {
@@ -253,6 +304,118 @@ public:
 		registers.setRegister(rd, address);
 	}
 
+	void floatConv(unsigned int cond, FloatConvOp op, int rd, int ra, int shift) {
+		if (!checkCond(cond)) {
+			return;
+		}
+		uint32_t value = registers.getRegister(ra);
+		switch (op) {
+			case OP_FLOOR:
+				value = floor(*(float*)&value);
+				break;
+			case OP_FTRUNC:
+				value = (int32_t)*(float*)&value;
+				break;
+			case OP_FLTS:
+				*(float*)&value = (int32_t)value;
+				break;
+			case OP_FLTU:
+				*(float*)&value = value;
+				break;
+		}
+		switch (op) {
+			case OP_FLOOR:
+			case OP_FTRUNC: {
+				if (shift > 0) {
+					value <<= shift;
+				} else {
+					value >>= -shift;
+				}
+				break;
+			}
+			case OP_FLTS:
+			case OP_FLTU:
+				log->debug("vc4exec", "shift %f >> %d", *(float*)&value, shift);
+				int32_t exponent = (value >> 23) & 0xff;
+				assert(exponent - shift < 0x100 && exponent - shift >= 0);
+				exponent = exponent - shift;
+				value = (value & 0x807fffff) | (exponent << 23);
+				log->debug("vc4exec", "result %f", *(float*)&value);
+				break;
+		}
+		log->debug("vc4exec", "floatConv, result %08x/%d/%f", value, value, *(float*)&value);
+		registers.setRegister(rd, value);
+	}
+
+	void floatOp(unsigned int cond, FloatOp op, int rd, int ra, int rb) {
+		if (!checkCond(cond)) {
+			return;
+		}
+		uint32_t a = registers.getRegister(ra);
+		uint32_t b = registers.getRegister(rb);
+		doBinaryFloatOp(op, rd, a, b);
+	}
+
+	void floatOpImm(unsigned int cond, FloatOp op, int rd, int ra, int32_t imm) {
+		if (!checkCond(cond)) {
+			return;
+		}
+		uint32_t a = registers.getRegister(ra);
+		doBinaryFloatOp(op, rd, a, imm);
+	}
+
+	void mulhd(unsigned int cond, int rd, int ra, int rb, bool aUnsigned, bool bUnsigned) {
+		if (!checkCond(cond)) {
+			return;
+		}
+		uint32_t a = registers.getRegister(ra);
+		uint32_t b = registers.getRegister(rb);
+		uint32_t result;
+		if (aUnsigned && bUnsigned) {
+			result = ((uint64_t)a * (uint64_t)b) >> 32;
+		} else if (aUnsigned) {
+			result = ((int64_t)a * (int64_t)(int32_t)b) >> 32;
+		} else if (bUnsigned) {
+			result = ((int64_t)(int32_t)a * (int64_t)b) >> 32;
+		} else {
+			result = ((int64_t)(int32_t)a * (int64_t)(int32_t)b) >> 32;
+		}
+		registers.setRegister(rd, result);
+	}
+
+	void div(unsigned int cond, int rd, int ra, int rb, bool aUnsigned, bool bUnsigned) {
+		if (!checkCond(cond)) {
+			return;
+		}
+		log->debug("vc4exec", "div: r%d = r%d / r%d", rd, ra, rb);
+		uint32_t a = registers.getRegister(ra);
+		uint32_t b = registers.getRegister(rb);
+		if (b == 0) {
+			throw std::runtime_error("Division through 0!");
+		}
+		uint32_t result;
+		if (aUnsigned && bUnsigned) {
+			result = (uint64_t)a / (uint64_t)b;
+		} else if (aUnsigned) {
+			result = (int64_t)a / (int64_t)(int32_t)b;
+		} else if (bUnsigned) {
+			result = (int64_t)(int32_t)a / (int64_t)b;
+		} else {
+			result = (int64_t)(int32_t)a / (int64_t)(int32_t)b;
+		}
+		registers.setRegister(rd, result);
+	}
+
+	void unk0004() {
+		log->debug("vc4exec", "UNK0004");
+		registers.setRegister(VC_SR, registers.getRegister(VC_SR) | 0x40000000);
+	}
+
+	void unk0005() {
+		log->debug("vc4exec", "UNK0005");
+		registers.setRegister(VC_SR, registers.getRegister(VC_SR) & ~0x40000000);
+	}
+
 private:
 	void doLoadStore(bool store, int format, unsigned int rd, uint32_t address) {
 		if (store) {
@@ -297,11 +460,13 @@ private:
 		if (op >= 0x20) {
 			throw std::runtime_error("Invalid operation.");
 		}
-		// TODO: What about status bits after arith. operations?
 		log->debug("vc4exec", "Op: %d %08x %08x => r%d", op, a, b, rd);
 		switch (op) {
 			case OP_MOV:
 				registers.setRegister(rd, b);
+				break;
+			case OP_CMN:
+				registers.setRegister(VC_SR, compareAdd(a, b) | (registers.getRegister(VC_SR) & ~0xf));
 				break;
 			case OP_ADD:
 				registers.setRegister(rd, a + b);
@@ -311,6 +476,9 @@ private:
 				break;
 			case OP_MUL:
 				registers.setRegister(rd, a * b);
+				break;
+			case OP_EOR:
+				registers.setRegister(rd, a ^ b);
 				break;
 			case OP_SUB:
 				registers.setRegister(rd, a - b);
@@ -324,6 +492,9 @@ private:
 			case OP_CMP:
 				registers.setRegister(VC_SR, compare(a, b) | (registers.getRegister(VC_SR) & ~0xf));
 				break;
+			case OP_RSB:
+				registers.setRegister(rd, b - a);
+				break;
 			case OP_BTST:
 				registers.setStatus(0x8, (a & (1 << b)) == 0 ? 0xa : 0x0);
 				break;
@@ -335,6 +506,9 @@ private:
 				break;
 			case OP_BSET:
 				registers.setRegister(rd, a | (1 << b));
+				break;
+			case OP_ADDS2:
+				registers.setRegister(rd, a + b * 2);
 				break;
 			case OP_BCLR:
 				registers.setRegister(rd, a & ~(1 << b));
@@ -354,13 +528,51 @@ private:
 			case OP_LSR:
 				registers.setRegister(rd, a >> b);
 				break;
+			case OP_CLZ:
+				// TODO: What if a is 0?
+				registers.setRegister(rd, __builtin_clz(b));
+				break;
 			case OP_LSL:
 				registers.setRegister(rd, a << b);
+				break;
+			case OP_ASR:
+				if ((a & 0x80000000) == 0) {
+					registers.setRegister(rd, a >> b);
+				} else {
+					registers.setRegister(rd, (a >> b) || (0xffffffff << (32 - b)));
+				}
 				break;
 			default:
 				throw std::runtime_error("Unimplemented operation.");
 		}
 		log->debug("vc4exec", "Result: %08x", registers.getRegister(rd));
+	}
+	void doBinaryFloatOp(FloatOp op, unsigned int rd, uint32_t a, uint32_t b) {
+		float result;
+		switch (op) {
+			case OP_FADD:
+				result = *(float*)&a + *(float*)&b;
+				registers.setRegister(rd, *(uint32_t*)&result);
+				break;
+			case OP_FSUB:
+				result = *(float*)&a - *(float*)&b;
+				registers.setRegister(rd, *(uint32_t*)&result);
+				break;
+			case OP_FDIV:
+				result = *(float*)&a / *(float*)&b;
+				registers.setRegister(rd, *(uint32_t*)&result);
+				break;
+			case OP_FMUL:
+				result = *(float*)&a * *(float*)&b;
+				registers.setRegister(rd, *(uint32_t*)&result);
+				break;
+			case OP_FCMP:
+				registers.setRegister(VC_SR, compareFloat(*(float*)&a, *(float*)&b)
+						| (registers.getRegister(VC_SR) & ~0xf));
+				break;
+			default:
+				throw std::runtime_error("Unimplemented float operation.");
+		}
 	}
 
 	bool checkCond(unsigned int cond) {
@@ -368,44 +580,45 @@ private:
 	}
 
 	bool checkCond(unsigned int cond, unsigned int status) {
+		if (cond >= 16) {
+			throw std::runtime_error("Invalid condition.");
+		}
+		Condition condition = (Condition)(cond >> 1);
+		bool result;
 #define V(x) ((x & 0x1) != 0)
 #define C(x) ((x & 0x2) != 0)
 #define N(x) ((x & 0x4) != 0)
 #define Z(x) ((x & 0x8) != 0)
-		if (cond == 0x0) {
-			return Z(status);
-		} else if (cond == 0x1) {
-			return !Z(status);
-		} else if (cond == 0x2) {
-			return C(status);
-		} else if (cond == 0x3) {
-			return !C(status);
-		} else if (cond == 0x4) {
-			return N(status);
-		} else if (cond == 0x5) {
-			return !N(status);
-		} else if (cond == 0x6) {
-			return V(status);
-		} else if (cond == 0x7) {
-			return !V(status);
-		} else if (cond == 0x8) {
-			return !C(status) && !Z(status);
-		} else if (cond == 0x9) {
-			return C(status) || Z(status);
-		} else if (cond == 0xa) {
-			return N(status) == V(status);
-		} else if (cond == 0xb) {
-			return N(status) != V(status);
-		} else if (cond == 0xc) {
-			return N(status) == V(status) && !Z(status);
-		} else if (cond == 0xd) {
-			return N(status) != V(status) || Z(status);
-		} else if (cond == 0xe) {
-			return true;
-		} else if (cond == 0xf) {
-			return false;
+		switch (condition) {
+			case COND_EQ:
+				result = Z(status);
+				break;
+			case COND_CS:
+				result = C(status);
+				break;
+			case COND_NS:
+				result = N(status);
+				break;
+			case COND_VS:
+				result = V(status);
+				break;
+			case COND_HI:
+				result = !C(status) && !Z(status);
+				break;
+			case COND_GE:
+				result = N(status) == V(status);
+				break;
+			case COND_GT:
+				result = N(status) == V(status) && !Z(status);
+				break;
+			case COND_TRUE:
+				result = true;
+				break;
+		}
+		if (cond & 0x1) {
+			return !result;
 		} else {
-			throw std::runtime_error("Unimplemented condition.");
+			return result;
 		}
 #undef V
 #undef C
@@ -413,22 +626,41 @@ private:
 #undef Z
 	}
 
-	unsigned int compare(uint32_t a, uint32_t b) {
+	unsigned int compare(int32_t a, int32_t b) {
+		return cc((int64_t)a - (int64_t)b);
+	}
+	unsigned int compareAdd(int32_t a, int32_t b) {
+		return cc((int64_t)a + (int64_t)b);
+	}
+
+	unsigned int compareFloat(float a, float b) {
 		unsigned int status = 0;
 		if (a == b) {
 			status |= 8;
 		}
-		if ((a - b) & 0x80000000) {
-			status |= 4;
-		}
 		if (a < b) {
-			status |= 2;
+			status |= 6;
 		}
-		int32_t difference32 = (int32_t)a - (int32_t)b;
-		int64_t difference64 = (int64_t)(int32_t)a - (int64_t)(int32_t)b;
-		if (difference32 != difference64) {
-			status |= 1;
+		return status;
+	}
+
+	unsigned int cc(int64_t result) {
+		log->debug("vc4exec", "cc: %016lx", result);
+		const unsigned int Z = 8, N = 4, C = 2, V = 1;
+		unsigned int status = 0;
+		if (result == 0) {
+			status |= Z;
 		}
+		if (result & 0x80000000) {
+			status |= N;
+		}
+		if (result & 0x100000000ull) {
+			status |= C;
+		}
+		if (result != (int32_t)result) {
+			status |= V;
+		}
+
 		return status;
 	}
 

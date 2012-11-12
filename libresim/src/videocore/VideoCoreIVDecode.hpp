@@ -60,6 +60,12 @@ public:
 			// TODO: HALT?
 		} else if (inst == 0x0001) {
 			// NOP
+		} else if (inst == 0x0004) {
+			execute.unk0004();
+			// TODO
+		} else if (inst == 0x0005) {
+			execute.unk0005();
+			// TODO
 		} else if (inst == 0x000a) {
 			execute.rti();
 		} else if ((inst & 0xffe0) == 0x0040) {
@@ -261,6 +267,57 @@ public:
 					return;
 				}
 			}
+		} else if ((inst1 & 0xff80) == 0xc480 && (inst2 & 0x20) == 0) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int rb = inst2 & 0x1f;
+			bool aUnsigned = (inst1 & 0x40) != 0;
+			bool bUnsigned = (inst1 & 0x20) != 0;
+			bool immediate = (inst2 & 0x40) != 0;
+			if (immediate) {
+				// TODO
+				throw std::runtime_error("div with immediate unimplemented!");
+			} else {
+				execute.div(cond, rd, ra, rb, aUnsigned, bUnsigned);
+			}
+			// TODO
+		} else if ((inst1 & 0xffe0) == 0xc5e0 && (inst2 & 0x60) == 0x0) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int rb = inst2 & 0x1f;
+			// TODO: ?
+			execute.addShl(cond, rd, ra, rb, 8);
+		} else if ((inst1 & 0xff80) == 0xca00 && (inst2 & 0x40) == 0x40) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int op = (inst1 >> 5) & 0x3;
+			int shift = extendSigned(inst2 & 0x3f, 0x20);
+			execute.floatConv(cond, (FloatConvOp)op, rd, ra, shift);
+		} else if ((inst1 & 0xfe00) == 0xc800 && (inst2 & 0x60) == 0x0) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int op = (inst1 >> 5) & 0xf;
+			unsigned int rb = inst2 & 0x1f;
+			execute.floatOp(cond, (FloatOp)op, rd, ra, rb);
+		} else if ((inst1 & 0xfe00) == 0xc800 && (inst2 & 0x40) == 0x40) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int op = (inst1 >> 5) & 0xf;
+			int32_t imm = extendSigned(inst2 & 0x3f, 0x40);
+			execute.floatOpImm(cond, (FloatOp)op, rd, ra, imm);
+		} else if ((inst1 & 0xff80) == 0xc400 && (inst2 & 0x60) == 0x0) {
+			unsigned int cond = (inst2 >> 7) & 0xf;
+			unsigned int rd = inst1 & 0x1f;
+			unsigned int ra = (inst2 >> 11) & 0x1f;
+			unsigned int rb = inst2 & 0x1f;
+			bool aUnsigned = (inst1 & 0x0040) != 0;
+			bool bUnsigned = (inst1 & 0x0020) != 0;
+			execute.mulhd(cond, rd, ra, rb, aUnsigned, bUnsigned);
 		} else {
 			// TODO
 			throw std::runtime_error("scalar32: Unsupported instruction.");
