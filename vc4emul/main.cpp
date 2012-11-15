@@ -49,14 +49,18 @@ static bool createSimulator(Processor **processor, QList<Device*> *devices) {
 int main(int argc, char **argv) {
 	QCoreApplication app(argc, argv);
 	// Parse the input parameters
-	if (argc != 4) {
+	if (argc != 4 && argc != 5) {
 		std::cout << "Invalid number of parameters.\n"
 				"Usage: " << argv[0]
-				<< " <memory-image> <image-address> <start-address>"
+				<< " <memory-image> <image-address> <start-address> [<bootrom>]"
 				<< std::endl;
 		return -1;
 	}
 	QString imageFileName = argv[1];
+	QString bootromFileName = "";
+	if (argc == 5) {
+		bootromFileName = argv[4];
+	}
 	bool ok;
 	uintptr_t imageAddress = QString(argv[2]).toULong(&ok, 0);
 	if (!ok) {
@@ -75,6 +79,15 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	QByteArray image = imageFile.readAll();
+	QByteArray bootrom;
+	if (bootromFileName != "") {
+		QFile bootromFile(bootromFileName);
+		if (!bootromFile.open(QFile::ReadOnly)) {
+			std::cerr << "Could not read the bootrom image." << std::endl;
+			return -1;
+		}
+		bootrom = bootromFile.readAll();
+	}
 	// Create the simulator
 	Processor *processor;
 	QList<Device*> devices;
@@ -99,6 +112,12 @@ int main(int argc, char **argv) {
 	log.info("", "Loading the memory image...");
 	for (int offset = 0; offset < image.length(); offset++) {
 		memory.writeByte(imageAddress + offset, image.at(offset));
+	}
+	if (bootromFileName != "") {
+		log.info("", "Loading the bootrom image...");
+		for (int offset = 0; offset < bootrom.length(); offset++) {
+			memory.writeByte(0x60000000 + offset, bootrom.at(offset));
+		}
 	}
 	// Start the simulation
 	log.info("", "Starting the simulation...");
