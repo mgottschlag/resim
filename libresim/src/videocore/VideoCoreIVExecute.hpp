@@ -290,7 +290,8 @@ public:
 		if (!checkCond(cond)) {
 			return;
 		}
-		uint32_t address = registers.getRegister(rb) + registers.getRegister(ra);
+		uint32_t offset = registers.getRegister(rb) * loadStoreSize((LoadStoreWidth)format);
+		uint32_t address = offset + registers.getRegister(ra);
 		doLoadStore(store, format, rd, address);
 	}
 
