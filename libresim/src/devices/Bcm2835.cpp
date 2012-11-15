@@ -13,10 +13,10 @@
 #define MEMORY_SIZE (128 * 1024 * 1024)
 #define MMIO_START 0x7e000000
 #define MMIO_LENGTH 0x01000000
-#define BOOTROM_START 0x60000000
-#define BOOTROM_LENGTH 0x00010000
-#define SRAM_START 0x60008000
-#define SRAM_LENGTH 0x00008000
+/*#define BOOTROM_START 0x60000000
+#define BOOTROM_LENGTH 0x00010000*/
+#define SRAM_START 0x60000000
+#define SRAM_LENGTH 0x00010000
 
 #include <iostream>
 
@@ -209,9 +209,6 @@ static MmioDefinition registers = {
 	sizeof(groups) / sizeof(groups[0]), groups
 };
 
-static MmioDefinition bootromRegs = {
-	0, NULL
-};
 
 Bcm2835::Bcm2835() : data(NULL), mmio(NULL), sram(NULL), sramData(NULL), uartRelay(NULL) {
 	for (unsigned int i = 0; i < 4; i++) {
