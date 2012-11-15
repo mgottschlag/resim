@@ -44,8 +44,10 @@ public:
 			uint16_t inst3 = memory->readHalfWord(pc() + 4);
 			vector48(inst1, inst2, inst3);
 		} else if ((inst1 & 0xf800) == 0xf800) {
-			uint32_t inst2 = memory->readWord(pc() + 2);
-			uint32_t inst3 = memory->readWord(pc() + 6);
+			uint32_t inst2 = memory->readHalfWord(pc() + 2);
+			inst2 = (inst2 << 16) | memory->readHalfWord(pc() + 4);
+			uint32_t inst3 = memory->readHalfWord(pc() + 6);
+			inst3 = (inst3 << 16) | memory->readHalfWord(pc() + 8);
 			vector80(inst1, inst2, inst3);
 		} else {
 			log->error("vc4", "Unsupported instruction: 0x%04x", inst1);
