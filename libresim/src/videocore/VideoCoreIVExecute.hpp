@@ -504,8 +504,16 @@ private:
 			case OP_EXTU:
 				registers.setRegister(rd, a & ((1 << b) - 1));
 				break;
+			case OP_MAX:
+				// TODO: Signed?
+				registers.setRegister(rd, a > b ? a : b);
+				break;
 			case OP_BSET:
 				registers.setRegister(rd, a | (1 << b));
+				break;
+			case OP_MIN:
+				// TODO: Signed?
+				registers.setRegister(rd, a < b ? a : b);
 				break;
 			case OP_ADDS2:
 				registers.setRegister(rd, a + b * 2);
