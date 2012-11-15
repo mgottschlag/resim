@@ -26,18 +26,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdexcept>
 
 uint32_t Memory::readWord(uintptr_t address) {
+	if ((address & 3) != 0) {
+		throw std::runtime_error("readWord(): Invalid address alignment!");
+	}
 	MemoryArea *area = getArea(address, 4, MemoryAccessMode::Read);
 	return area->readWord(address);
 }
 void Memory::writeWord(uintptr_t address, uint32_t value) {
+	if ((address & 3) != 0) {
+		throw std::runtime_error("writeWord(): Invalid address alignment!");
+	}
 	MemoryArea *area = getArea(address, 4, MemoryAccessMode::Write);
 	area->writeWord(address, value);
 }
 uint16_t Memory::readHalfWord(uintptr_t address) {
+	if ((address & 1) != 0) {
+		throw std::runtime_error("readHalfWord(): Invalid address alignment!");
+	}
 	MemoryArea *area = getArea(address, 2, MemoryAccessMode::Read);
 	return area->readHalfWord(address);
 }
 void Memory::writeHalfWord(uintptr_t address, uint16_t value) {
+	if ((address & 1) != 0) {
+		throw std::runtime_error("writeHalfWord(): Invalid address alignment!");
+	}
 	MemoryArea *area = getArea(address, 2, MemoryAccessMode::Write);
 	area->writeHalfWord(address, value);
 }
